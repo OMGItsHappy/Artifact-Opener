@@ -21,14 +21,27 @@ fn main() -> notify::Result<()> {
         Path::new("C:\\Users\\oschwab\\Downloads"),
         RecursiveMode::NonRecursive,
     )?;
+
+    let mut last_unziped = PathBuf::new();
     // Block forever, printing out events as they come in
     for res in rx {
         match res {
             Ok(event) => {
                 let file = event.paths[0].clone();
-                if event.kind.is_create() && is_tar_gz(file.clone()) {
-                    unzip_file(file.clone());
-                    print!("Unzipped file: {:?}", file);
+                println!("{:?}", event);
+                println!("{:}", is_tar_gz(file.clone()));
+                if last_unziped != file && is_tar_gz(file.clone()) {
+                    match unzip_file(file.clone()) {
+                        Ok(path) => {
+                            last_unziped = file.clone();
+                            println!("Unzipped file: {:?}", path);
+                            match find_index_file(file) {
+                                Ok(path) => open::that(path.to_str().unwrap()).unwrap(),
+                                Err(e) => println!("Error finding index file: {:?}", e),
+                            }
+                        }
+                        Err(e) => println!("Error unzipping file: {:?}", e),
+                    }
                 }
             }
             Err(e) => println!("watch error: {:?}", e),
@@ -54,16 +67,13 @@ fn unzip_or_find(file: PathBuf) {
         }
     } else {
         println!("Finding index file: {:?}", file);
-        match find_index_file(file) {
-            Ok(path) => open::that(path.to_str().unwrap()).unwrap(),
-            Err(e) => println!("Error finding index file: {:?}", e),
-        }
     }
 }
+
 use glob::glob;
 use regex::Regex;
 
-fn unzip_file(file: PathBuf) -> Result<(), io::Error> {
+fn unzip_file(file: PathBuf) -> Result<String, io::Error> {
     let tar_gz = File::open(file.clone())?;
     let tar = GzDecoder::new(tar_gz);
     let mut archive = Archive::new(tar);
@@ -71,8 +81,11 @@ fn unzip_file(file: PathBuf) -> Result<(), io::Error> {
         .parent()
         .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "No parent directory"))?;
     archive.unpack(extract_to)?;
-    println!("Unzipped file1: {:?}", extract_to);
-    Ok(())
+    println!(
+        "File successfully unziped: {:?}\n\n og file: {:?}",
+        extract_to, file
+    );
+    Ok(extract_to.to_str().unwrap().to_string())
 }
 
 fn find_index_file(file: PathBuf) -> Result<PathBuf, PathBuf> {
