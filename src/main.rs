@@ -1,6 +1,8 @@
 use clap::Parser;
 use flate2::read::GzDecoder;
+use glob::glob;
 use notify::{Event, RecursiveMode, Watcher};
+use regex::Regex;
 use std::fs::File;
 use std::io;
 use std::path::PathBuf;
@@ -97,9 +99,6 @@ fn is_tar_gz(file: PathBuf) -> bool {
     let regex = Regex::new(&regex).unwrap();
     regex.is_match(file.file_name().unwrap().to_str().unwrap())
 }
-
-use glob::glob;
-use regex::Regex;
 
 fn unzip_file(file: PathBuf) -> Result<String, io::Error> {
     let tar_gz = File::open(file.clone())?;
