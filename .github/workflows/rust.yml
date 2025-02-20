@@ -12,7 +12,7 @@ env:
 jobs:
   build-windows:
 
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
 
     steps:
     - uses: actions/checkout@v4
@@ -22,9 +22,9 @@ jobs:
     - name: Upload binaries to release
       uses: svenstaro/upload-release-action@v2
       with:
-        repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: target/release/artifact-opener
-        asset_name: artifact-opener-windows
+        repo_token: ${{ secrets.PAT }}
+        file: target/release/artifact-opener.exe
+        asset_name: artifact-opener-windows.exe
         tag: ${{ github.ref }}
         overwrite: true
 
@@ -38,7 +38,7 @@ jobs:
     - name: Upload binaries to release
       uses: svenstaro/upload-release-action@v2
       with:
-        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        repo_token: ${{ secrets.PAT }}
         file: target/release/artifact-opener
         asset_name: artifact-opener-macos
         tag: ${{ github.ref }}
