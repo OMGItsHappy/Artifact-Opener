@@ -21,7 +21,6 @@ struct Args {
     // One shot file to unzip and open.
     #[arg(short = 'o', long)]
     file: Option<PathBuf>,
-
     // The pattern to watch for that will be unzipped.
     #[arg(short, long, default_value = r"^artifact_\{.*\}\.tar\.gz$")]
     pattern_to_watch_for: Option<String>,
@@ -63,9 +62,8 @@ fn watch_dir(dir: PathBuf) -> notify::Result<()> {
                 let file = event.paths[0].clone();
                 if last_unziped != file && is_tar_gz(file.clone()) {
                     match unzip_file_and_open(file.clone()) {
-                        Ok(path) => {
+                        Ok(_path) => {
                             last_unziped = file.clone();
-                            println!("Unzipped file: {:?}", path);
                         }
                         Err(e) => println!("Error unzipping file: {:?}", e),
                     }
@@ -80,16 +78,14 @@ fn watch_dir(dir: PathBuf) -> notify::Result<()> {
 
 fn unzip_file_and_open(file: PathBuf) -> Result<String, String> {
     match unzip_file(file.clone()) {
-        Ok(path) => {
-            println!("Unzipped file: {:?}", path);
-            match find_index_file(path.clone().into()) {
-                Ok(path) => {
-                    open::that(path.to_str().unwrap()).unwrap();
-                    Ok(path.to_str().unwrap().to_string())
-                }
-                Err(e) => Err(format!("Error finding index file: {:?}", e)),
+        Ok(path) => match find_index_file(path.clone().into()) {
+            Ok(path) => {
+                println!("Opening index file: {:?}\n", path);
+                open::that(path.to_str().unwrap()).unwrap();
+                Ok(path.to_str().unwrap().to_string())
             }
-        }
+            Err(e) => Err(format!("Error finding index file: {:?}", e)),
+        },
         Err(e) => Err(format!("Error unzipping file: {:?}", e)),
     }
 }
@@ -110,9 +106,10 @@ fn unzip_file(file: PathBuf) -> Result<String, io::Error> {
         .parent()
         .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "No parent directory"))?
         .join(name_without_extension);
+    println!("Extracting to: {:?}\n", extract_to);
     archive.unpack(extract_to.clone())?;
     println!(
-        "File successfully unziped: {:?}\n\n og file: {:?}",
+        "Original file: {:?}\nSuccessfully unziped to: {:?}\n",
         extract_to, file
     );
     Ok(extract_to.to_str().unwrap().to_string())
